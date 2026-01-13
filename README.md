@@ -66,7 +66,15 @@ The original [dahlb/ha_kia_hyundai](https://github.com/dahlb/ha_kia_hyundai) rep
 
 ### Multiple Vehicles
 
-If you have multiple vehicles on your Kia account, they will all be added automatically in a single setup flow.
+**Current Behavior:** The integration will automatically detect and add up to 2 vehicles per login session. If you have 3 or more vehicles:
+- First 2 vehicles will be added successfully on initial login
+- Additional vehicles can be added after the Kia API rate limit clears (wait time varies, but 24 hours is a safe estimate)
+- Simply log in again after waiting to add remaining vehicles
+
+**Known Limitation:** Vehicles with older infotainment systems (pre-ccOS) may not be detected during the initial vehicle discovery. This is a compatibility issue with the underlying API library, not a rate limiting issue. If you have a mix of newer and older vehicles:
+- Newer vehicles (with ccOS) will typically be detected first
+- Older vehicles may not appear in the available vehicle list at all
+- Currently investigating solutions for better older vehicle support
 
 ## 🔄 Update Frequency
 
@@ -95,6 +103,24 @@ If you have multiple vehicles on your Kia account, they will all be added automa
 - Check your phone/email for the code
 - Code expires after a few minutes - request a new one if needed
 
+### Rate Limiting
+If you see "Please try again later" errors:
+- Kia's API has rate limits to prevent excessive requests
+- Wait 24 hours before attempting to add additional vehicles
+- Avoid making multiple login attempts in quick succession
+
+### Multiple Vehicles Not Appearing
+**If only 2 of your 3+ vehicles were added:**
+- This is due to Kia API rate limiting (max 2 vehicles per session)
+- Wait for the rate limit to clear (wait time varies, but 24 hours is a safe estimate), then log in again
+- Each login session can add up to 2 vehicles
+
+**If a specific vehicle never appears in the list:**
+- May be due to older infotainment system (pre-ccOS) incompatibility
+- Verify the vehicle has an active Kia Connect subscription
+- Check if the vehicle appears in the official Kia Connect app
+- If it works in the official app but not here, this may be an API library limitation
+
 ### "Invalid handler specified" Error
 This has been fixed in this fork! Make sure you're using the latest version.
 
@@ -105,15 +131,14 @@ This has been fixed in this fork! Make sure you're using the latest version.
 
 ### Enable Debug Logging
 
-Add to `configuration.yaml`:
-```yaml
-logger:
-  default: info
-  logs:
-    custom_components.ha_kia_hyundai: debug
-```
-
-Then go to **Settings** → **System** → **Logs** and look for errors.
+1. Go to **Settings** → **Devices & Services**
+2. Find the **Kia US** integration
+3. Click the **three dots** (⋮) on the integration card
+4. Click **"Enable debug logging"**
+5. Reproduce the issue
+6. Go to **Settings** → **System** → **Logs**
+7. Look for entries mentioning `ha_kia_hyundai`
+8. Click the three dots again and **"Disable debug logging"** to download logs
 
 ## 📝 Supported Entities
 
@@ -134,12 +159,26 @@ Then go to **Settings** → **System** → **Logs** and look for errors.
 - Climate control
 - Charging switch
 - Charge limit numbers (AC/DC)
-- Heated steering wheel
-- Heated rear window
+- Heated steering wheel (if supported)
+- Heated rear window (if supported)
 - Defrost/heating acc switches
 
 ### Buttons
 - Force update (requests fresh data from vehicle)
+
+## 🚗 Vehicle Compatibility
+
+**Fully Supported (Newer ccOS-equipped vehicles):**
+- Most 2024+ Kia models with newer infotainment systems
+- Vehicles with ccOS (Connected Car Operating System)
+
+**Limited Support:**
+- Some older model year vehicles may not appear during setup
+- Vehicles with pre-ccOS infotainment systems may have reduced features or detection issues
+
+**Not Supported:**
+- Non-USA Kia vehicles (use [kia_uvo](https://github.com/Hyundai-Kia-Connect/kia_uvo) for other regions)
+- Vehicles without active Kia Connect subscriptions
 
 ## ⚖️ License
 
@@ -148,7 +187,7 @@ MIT License - see [LICENSE](LICENSE) file
 ## 🙏 Credits
 
 - **Original Author**: [Bren Dahl (@dahlb)](https://github.com/dahlb) - Thank you for creating this integration!
-- **OTP Fix**: ❤️ mmase ❤️ - For the critical OTP authentication fix
+- **OTP Fix**: mmase - For the critical OTP authentication fix
 - **Community Maintainer**: MarcusTaz - Keeping it alive for the community
 - **API Library**: [kia-hyundai-api](https://github.com/dahlb/kia-hyundai-api)
 
@@ -162,6 +201,13 @@ This is a community-maintained project! Contributions are welcome:
 4. Test thoroughly
 5. Submit a pull request
 
+## 💡 Known Issues & Limitations
+
+- **Multi-vehicle limit**: Only 2 vehicles added per login session due to Kia API rate limiting
+- **Older vehicles**: Pre-ccOS vehicles (older infotainment systems) may not be detected
+- **Rate limit wait**: After adding 2 vehicles, must wait for rate limit to clear (typically within 24 hours) to add additional vehicles
+- **Feature differences**: Older vehicles show fewer entities (e.g., no seat temperature control)
+
 ## ⚠️ Disclaimer
 
 This integration is not affiliated with, endorsed by, or connected to Kia Motors. Use at your own risk. Excessive API calls may drain your vehicle's 12V battery.
@@ -174,3 +220,13 @@ This integration is not affiliated with, endorsed by, or connected to Kia Motors
 ---
 
 **If this integration helps you, please ⭐ star the repo to show support!**
+
+## 🔮 Future Improvements
+
+We're actively investigating:
+- Better multi-vehicle support
+- Compatibility with older vehicle models
+- Enhanced rate limit handling
+- Automatic retry logic for failed additions
+
+Stay tuned for updates!
