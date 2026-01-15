@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from custom_components.ha_kia_hyundai import DOMAIN, CONF_VEHICLE_ID, VehicleCoordinator
+from custom_components.ha_kia_hyundai import DOMAIN, VehicleCoordinator
 from custom_components.ha_kia_hyundai.vehicle_coordinator_base_entity import VehicleCoordinatorBaseEntity
 
 _LOGGER = getLogger(__name__)
@@ -49,17 +49,20 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    vehicle_id = config_entry.data[CONF_VEHICLE_ID]
-    coordinator: VehicleCoordinator = hass.data[DOMAIN][vehicle_id]
+    """Set up number entities."""
+    entry_data = hass.data[DOMAIN][config_entry.entry_id]
+    coordinators = entry_data["coordinators"]
 
     entities = []
-    for description in NUMBER_DESCRIPTIONS:
-        if getattr(coordinator, description.key, None) is not None:
-            entities.append(
-                ChargeLimitNumber(coordinator, description)
-            )
+    for coordinator in coordinators.values():
+        for description in NUMBER_DESCRIPTIONS:
+            if getattr(coordinator, description.key, None) is not None:
+                entities.append(
+                    ChargeLimitNumber(coordinator, description)
+                )
 
-    async_add_entities(entities)
+    if entities:
+        async_add_entities(entities)
 
 
 class ChargeLimitNumber(VehicleCoordinatorBaseEntity, NumberEntity, RestoreEntity):
@@ -95,21 +98,22 @@ class ChargeLimitNumber(VehicleCoordinatorBaseEntity, NumberEntity, RestoreEntit
         ):
             return
 
-        # set new limits
+        # Set new limits
         if self.entity_description.key == AC_CHARGING_LIMIT_KEY:
             ac_limit = int(value)
             dc_limit = self.coordinator.ev_charge_limits_dc
         else:
             ac_limit = self.coordinator.ev_charge_limits_ac
             dc_limit = int(value)
-        await self.coordinator.api_connection.set_charge_limits(
-            vehicle_id=self.coordinator.vehicle_id,
-            ac_limit=ac_limit,
-            dc_limit=dc_limit,
+        
+        await self.hass.async_add_executor_job(
+            self.coordinator.vehicle_manager.set_charge_limits,
+            self.coordinator.vehicle_id,
+            ac_limit,
+            dc_limit,
         )
         self.coordinator.async_update_listeners()
         await self.coordinator.async_request_refresh()
-
 
     async def async_internal_added_to_hass(self) -> None:
         """Call when the button is added to hass."""
