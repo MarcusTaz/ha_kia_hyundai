@@ -18,19 +18,23 @@ PARALLEL_UPDATES: int = 1
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ):
-    vehicle_id = config_entry.unique_id
-    coordinator: VehicleCoordinator = hass.data[DOMAIN][vehicle_id]
-
-    switches: [SwitchEntity] = [
-        ChargingSwitch(coordinator=coordinator),
-    ]
-    if coordinator.can_remote_climate:
-        _LOGGER.debug("Adding climate related switch entities")
-        switches.append(ClimateDesiredDefrostSwitch(coordinator=coordinator))
-        switches.append(ClimateDesiredHeatingAccSwitch(coordinator=coordinator))
-    else:
-        _LOGGER.debug("skipping climate related switch entities")
-    async_add_entities(switches)
+    """Set up switch entities."""
+    entry_data = hass.data[DOMAIN][config_entry.entry_id]
+    coordinators = entry_data["coordinators"]
+    
+    switches = []
+    for coordinator in coordinators.values():
+        switches.append(ChargingSwitch(coordinator=coordinator))
+        
+        if coordinator.can_remote_climate:
+            _LOGGER.debug(f"Adding climate switches for {coordinator.vehicle_name}")
+            switches.append(ClimateDesiredDefrostSwitch(coordinator=coordinator))
+            switches.append(ClimateDesiredHeatingAccSwitch(coordinator=coordinator))
+        else:
+            _LOGGER.debug(f"Skipping climate switches for {coordinator.vehicle_name}")
+    
+    if switches:
+        async_add_entities(switches)
 
 
 class ClimateDesiredDefrostSwitch(VehicleCoordinatorBaseEntity, SwitchEntity, RestoreEntity):
@@ -108,6 +112,7 @@ class ClimateDesiredHeatingAccSwitch(VehicleCoordinatorBaseEntity, SwitchEntity,
         self.__dict__.pop("state", None)
         self.coordinator.climate_desired_heating_acc = state == STATE_ON
 
+
 class ChargingSwitch(VehicleCoordinatorBaseEntity, SwitchEntity):
     def __init__(
             self,
@@ -129,11 +134,19 @@ class ChargingSwitch(VehicleCoordinatorBaseEntity, SwitchEntity):
         return self.coordinator.ev_battery_charging
 
     async def async_turn_on(self, **kwargs: any) -> None:
-        await self.coordinator.api_connection.start_charge(vehicle_id=self.coordinator.vehicle_id)
+        """Start charging."""
+        await self.hass.async_add_executor_job(
+            self.coordinator.vehicle_manager.start_charge,
+            self.coordinator.vehicle_id
+        )
         self.coordinator.async_update_listeners()
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: any) -> None:
-        await self.coordinator.api_connection.stop_charge(vehicle_id=self.coordinator.vehicle_id)
+        """Stop charging."""
+        await self.hass.async_add_executor_job(
+            self.coordinator.vehicle_manager.stop_charge,
+            self.coordinator.vehicle_id
+        )
         self.coordinator.async_update_listeners()
         await self.coordinator.async_request_refresh()
