@@ -1,6 +1,4 @@
 # Configuration Constants
-from kia_hyundai_api.const import SeatSettings
-
 from homeassistant.const import Platform
 
 DOMAIN: str = "ha_kia_hyundai"
@@ -10,9 +8,7 @@ CONF_OTP_CODE: str = "otp_code"
 CONF_DEVICE_ID: str = "device_id"
 CONF_REFRESH_TOKEN: str = "refresh_token"
 CONF_ACCESS_TOKEN: str = "access_token"
-
 CONFIG_FLOW_TEMP_VEHICLES: str = "vehicles"
-
 DEFAULT_SCAN_INTERVAL: int = 10
 DELAY_BETWEEN_ACTION_IN_PROGRESS_CHECKING: int = 20
 TEMPERATURE_MIN = 62
@@ -35,6 +31,7 @@ PLATFORMS = [
 # Sensor Specific Constants
 DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
 
+# Seat heating/cooling settings
 SEAT_STATUS = {
     (0, 1): "Off",
     (1, 4): "High Heat",
@@ -44,6 +41,16 @@ SEAT_STATUS = {
     (2, 3): "Medium Cool",
     (2, 2): "Low Cool",
 }
+
+# We'll define our own seat settings since we're not using the old library
+class SeatSettings:
+    NONE = (0, 1)
+    HeatHigh = (1, 4)
+    HeatMedium = (1, 3)
+    HeatLow = (1, 2)
+    CoolHigh = (2, 4)
+    CoolMedium = (2, 3)
+    CoolLow = (2, 2)
 
 STR_TO_ENUM = {
     "Off": SeatSettings.NONE,
